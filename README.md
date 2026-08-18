@@ -44,16 +44,16 @@ SMT3HD (KEYBOARD+MOUSE / PUZZLE):
 
 詳細は[調査記録](docs/research/RIGHT_STICK_VIEW_AND_DASH_INVESTIGATION.md)を参照してください。
 
-## ダッシュPoC（未検証）
+## ダッシュPoC（実機確認済み）
 
-`src/FieldDashPatch.cs`は、reWASDから送られるF15を押している間だけ通常ダンジョン移動を1.35倍にする実験です。
+`src/FieldDashPatch.cs`は、reWASDから送られる`P`を押している間だけ通常探索のネイティブ移動基準速度を1.6倍にします。
 
 ```text
-reWASD: RB（またはLB） -> F15
-MOD: F15 hold -> dungeon movement x1.35
+reWASD: LT（真VのZL相当） -> P + native input mute
+MOD: P hold -> normal field/dungeon movement x1.60
 ```
 
-これは未検証PoCです。現在はプレイヤーの1フレーム移動差分へ追加量を適用するため、壁・狭い通路・イベント境界で十分な検証が必要です。BATTLE、はしご、穴、ダメージ、復帰処理、大きな座標移動では動作させないガードを入れています。
+Steam版1.0.4の病院内で、通常移動との差、壁際、曲がり角を実機確認済みです。`fldPlayerCalc()`実行中だけ速度定数`29`／`20`を1.6倍にし、直後に必ず復元します。定数が想定値と一致しないゲームバージョンでは自動的に無効化します。BATTLE、はしご、穴、ダメージ、復帰処理では動作させないガードを入れています。通常探索と同じ移動処理を使う屋内・屋外マップが対象で、ワールドマップやスクリプト移動は対象外です。
 
 ## ビルド
 
@@ -77,4 +77,3 @@ dotnet build .\NocturneDungeonControls.csproj -c Release `
 - ゲーム本体、Atlus/Segaのアセット、生成されたゲームDLLはこのリポジトリに含めません。
 - reWASDはサードパーティ製の有料ソフトウェアです。このリポジトリとは無関係です。
 - MODや入力変換ツールの利用は自己責任で行ってください。
-
