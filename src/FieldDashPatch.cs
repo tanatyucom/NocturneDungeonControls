@@ -15,12 +15,15 @@ namespace NocturneDungeonControls
         private const float Multiplier = 1.60f;
         private const int NormalSpeedRva = 0x02AF1FF8;
         private const int AlternateSpeedRva = 0x028C7528;
+        private const int WorldMapSpeedRva = 0x028C9E30;
         private const float ExpectedNormalSpeed = 29f;
         private const float ExpectedAlternateSpeed = 20f;
+        private const float ExpectedWorldMapSpeed = 16f;
         private const uint PageExecuteReadWrite = 0x40;
 
         private static IntPtr _normalSpeedAddress;
         private static IntPtr _alternateSpeedAddress;
+        private static IntPtr _worldMapSpeedAddress;
         private static bool _addressesValidated;
         private static bool _patchActive;
         private static bool _loggedHeld;
@@ -41,7 +44,7 @@ namespace NocturneDungeonControls
         private static void Prefix()
         {
             RestoreSpeeds();
-            if (!DashHeld || !IsSafeNormalMovement())
+            if (!DashHeld)
             {
                 LogRelease();
                 return;
@@ -52,13 +55,19 @@ namespace NocturneDungeonControls
                 return;
             }
 
-            WriteFloat(_normalSpeedAddress, ExpectedNormalSpeed * Multiplier);
-            WriteFloat(_alternateSpeedAddress, ExpectedAlternateSpeed * Multiplier);
+            // Wm2 consumes its own movement-step constant. It is harmless to
+            // patch it around the dispatcher when another field mode is active.
+            WriteFloat(_worldMapSpeedAddress, ExpectedWorldMapSpeed * Multiplier);
+            if (IsSafeNormalMovement())
+            {
+                WriteFloat(_normalSpeedAddress, ExpectedNormalSpeed * Multiplier);
+                WriteFloat(_alternateSpeedAddress, ExpectedAlternateSpeed * Multiplier);
+            }
             _patchActive = true;
             if (!_loggedHeld)
             {
                 _loggedHeld = true;
-                MelonLogger.Msg("[NocturneDungeonControls] Dash ON (P, native speed x1.60)");
+                MelonLogger.Msg("[NocturneDungeonControls] Dash ON (P, dungeon/world map x1.60)");
             }
         }
 
@@ -99,23 +108,26 @@ namespace NocturneDungeonControls
 
             _normalSpeedAddress = IntPtr.Add(moduleBase, NormalSpeedRva);
             _alternateSpeedAddress = IntPtr.Add(moduleBase, AlternateSpeedRva);
+            _worldMapSpeedAddress = IntPtr.Add(moduleBase, WorldMapSpeedRva);
             float normal = ReadFloat(_normalSpeedAddress);
             float alternate = ReadFloat(_alternateSpeedAddress);
+            float worldMap = ReadFloat(_worldMapSpeedAddress);
             if (Math.Abs(normal - ExpectedNormalSpeed) > 0.001f ||
-                Math.Abs(alternate - ExpectedAlternateSpeed) > 0.001f)
+                Math.Abs(alternate - ExpectedAlternateSpeed) > 0.001f ||
+                Math.Abs(worldMap - ExpectedWorldMapSpeed) > 0.001f)
             {
                 if (!_loggedUnsupported)
                 {
                     _loggedUnsupported = true;
                     MelonLogger.Warning(
                         $"[NocturneDungeonControls] Unsupported game constants; dash disabled " +
-                        $"(normal={normal}, alternate={alternate}).");
+                        $"(normal={normal}, alternate={alternate}, worldMap={worldMap}).");
                 }
                 return false;
             }
 
             _addressesValidated = true;
-            MelonLogger.Msg("[NocturneDungeonControls] Native movement speed constants validated (29/20).");
+            MelonLogger.Msg("[NocturneDungeonControls] Native movement speed constants validated (29/20/16).");
             return true;
         }
 
@@ -144,6 +156,7 @@ namespace NocturneDungeonControls
 
             WriteFloat(_normalSpeedAddress, ExpectedNormalSpeed);
             WriteFloat(_alternateSpeedAddress, ExpectedAlternateSpeed);
+            WriteFloat(_worldMapSpeedAddress, ExpectedWorldMapSpeed);
             _patchActive = false;
         }
 

@@ -17,6 +17,7 @@
     <!-- Retained as crash-investigation source only; never compile this native hook. -->
     <Compile Remove="src\NativePadCheckHook.cs" />
     <Compile Remove="helper\**\*.cs" />
+    <Compile Remove="analysis\**\*.cs" />
     <Compile Remove="src\ExternalInputBridge.cs" />
     <Compile Remove="src\FieldCameraMainProbe.cs" />
     <Compile Remove="src\RightStickTurnInput.cs" />
