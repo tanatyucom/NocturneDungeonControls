@@ -46,14 +46,15 @@ SMT3HD (KEYBOARD+MOUSE / PUZZLE):
 
 ## ダッシュPoC（実機確認済み）
 
-`src/FieldDashPatch.cs`は、reWASDから送られる`P`を押している間だけ通常探索とワールドマップのネイティブ移動基準速度を1.6倍にします。
+`src/FieldDashPatch.cs`は、LTまたは`P`を押している間だけ通常探索とワールドマップのネイティブ移動基準速度を1.6倍にします。LTとRTを同時押しすると、ダッシュ固定のON／OFFを切り替えられます。
 
 ```text
-reWASD: LT（真VのZL相当） -> P + native input mute
-MOD: P hold -> normal field/dungeon + world map movement x1.60
+LT hold -> normal field/dungeon + world map movement x1.60
+LT + RT -> dash keep ON/OFF
+P hold -> keyboard/reWASD fallback
 ```
 
-Steam版1.0.4の病院内とワールドマップで実機確認済みです。`fldPlayerCalc()`実行中だけ通常探索の速度定数`29`／`20`とワールドマップ専用定数`16`を1.6倍にし、直後に必ず復元します。定数が想定値と一致しないゲームバージョンでは自動的に無効化します。BATTLE、はしご、穴、ダメージ、復帰処理では通常探索側のダッシュを動作させないガードを入れています。スクリプトによる高速移動機能は流用していません。
+Steam版1.0.4の病院内とワールドマップで、LT直入力、LT＋RT固定切替、速度差、壁際、曲がり角を実機確認済みです。`fldPlayerCalc()`実行中だけ通常探索の速度定数`29`／`20`とワールドマップ専用定数`16`を1.6倍にし、直後に必ず復元します。定数が想定値と一致しないゲームバージョンでは自動的に無効化します。BATTLE、はしご、穴、ダメージ、復帰処理では通常探索側のダッシュを動作させないガードを入れています。スクリプトによる高速移動機能は流用していません。
 
 ## ビルド
 

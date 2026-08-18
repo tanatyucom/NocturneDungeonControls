@@ -28,6 +28,8 @@ namespace NocturneDungeonControls
         private static bool _patchActive;
         private static bool _loggedHeld;
         private static bool _loggedUnsupported;
+        private static bool _dashLatched;
+        private static bool _comboWasHeld;
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int virtualKey);
@@ -39,12 +41,41 @@ namespace NocturneDungeonControls
             uint newProtection,
             out uint oldProtection);
 
-        private static bool DashHeld => (GetAsyncKeyState(VirtualKeyDash) & 0x8000) != 0;
+        private static bool IsPadMapHeld(Il2Cpplibsdf_H.SDF_PADMAP map)
+        {
+            try
+            {
+                return dds3PadManager.DDS3_PADCHECK_PRESS(map, 0);
+            }
+            catch (Exception)
+            {
+                // Keep the verified keyboard/reWASD fallback available even if
+                // the game's logical pad manager is unavailable during startup.
+                return false;
+            }
+        }
+
+        private static bool UpdateDashState()
+        {
+            bool leftTrigger = IsPadMapHeld(Il2Cpplibsdf_H.SDF_PADMAP.SDF_PADMAP_L2);
+            bool rightTrigger = IsPadMapHeld(Il2Cpplibsdf_H.SDF_PADMAP.SDF_PADMAP_R2);
+            bool comboHeld = leftTrigger && rightTrigger;
+            if (comboHeld && !_comboWasHeld)
+            {
+                _dashLatched = !_dashLatched;
+                MelonLogger.Msg(
+                    $"[NocturneDungeonControls] Dash keep {(_dashLatched ? "ON" : "OFF")} (LT+RT)");
+            }
+            _comboWasHeld = comboHeld;
+
+            bool keyboardHeld = (GetAsyncKeyState(VirtualKeyDash) & 0x8000) != 0;
+            return keyboardHeld || leftTrigger || _dashLatched;
+        }
 
         private static void Prefix()
         {
             RestoreSpeeds();
-            if (!DashHeld)
+            if (!UpdateDashState())
             {
                 LogRelease();
                 return;
@@ -67,7 +98,7 @@ namespace NocturneDungeonControls
             if (!_loggedHeld)
             {
                 _loggedHeld = true;
-                MelonLogger.Msg("[NocturneDungeonControls] Dash ON (P, dungeon/world map x1.60)");
+                MelonLogger.Msg("[NocturneDungeonControls] Dash ON (P/LT, dungeon/world map x1.60)");
             }
         }
 
