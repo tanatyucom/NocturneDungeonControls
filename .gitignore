@@ -1,0 +1,11 @@
+bin/
+obj/
+analysis/
+artifacts/
+helper/bin/
+helper/obj/
+.analysis_tmp/
+*.user
+*.suo
+*.log
+
