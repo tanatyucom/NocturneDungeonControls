@@ -1,20 +1,20 @@
 using MelonLoader;
 
 [assembly: MelonInfo(
-    typeof(NocturneDungeonControls.ModMain),
-    "Nocturne Dungeon Controls",
+    typeof(NocturneModernController.ModMain),
+    "Nocturne Modern Controller",
     "1.0.0",
     "Gray Ghost")]
 [assembly: MelonGame(null, "smt3hd")]
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     public sealed class ModMain : MelonMod
     {
         public override void OnInitializeMelon()
         {
             HarmonyInstance.CreateClassProcessor(typeof(FieldDashPatch)).Patch();
-            LoggerInstance.Msg("[NocturneDungeonControls] Dash loaded: hold LT/P; press LT+RT to toggle dash keep.");
+            LoggerInstance.Msg("[NocturneModernController] Dash loaded: hold LT/P; press LT+RT to toggle dash keep.");
         }
     }
 }

@@ -7,7 +7,7 @@ using Windows.Gaming.Input;
 
 internal static class Program
 {
-    private const string MapName = "NocturneDungeonControls_XInput_v1";
+    private const string MapName = "NocturneModernController_XInput_v1";
     private const int Magic = 0x4E444331;
     private static readonly object HidLock = new object();
     private static readonly byte[] HidReport = new byte[64];

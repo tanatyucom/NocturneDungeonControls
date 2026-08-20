@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>NocturneDungeonControls</AssemblyName>
-    <RootNamespace>NocturneDungeonControls</RootNamespace>
+    <AssemblyName>NocturneModernController</AssemblyName>
+    <RootNamespace>NocturneModernController</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Optimize>true</Optimize>

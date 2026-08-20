@@ -1,4 +1,4 @@
-# Nocturne Dungeon Controls
+# Nocturne Modern Controller
 
 『真・女神転生III NOCTURNE HD REMASTER』（Steam版）のダンジョン操作を、現代的な操作感へ近づけるための調査・実験プロジェクトです。
 
@@ -61,17 +61,17 @@ Steam版1.0.4の病院内とワールドマップで、LT直入力、LT＋RT固�
 MelonLoaderとSMT3HDの生成済みIl2Cppアセンブリが必要です。
 
 ```powershell
-dotnet build .\NocturneDungeonControls.csproj -c Release
+dotnet build .\NocturneModernController.csproj -c Release
 ```
 
 別のゲームフォルダーを使う場合:
 
 ```powershell
-dotnet build .\NocturneDungeonControls.csproj -c Release `
+dotnet build .\NocturneModernController.csproj -c Release `
   -p:GameDir="D:\SteamLibrary\steamapps\common\smt3hd"
 ```
 
-出力された`NocturneDungeonControls.dll`をゲームの`Mods`フォルダーへコピーします。
+出力された`NocturneModernController.dll`をゲームの`Mods`フォルダーへコピーします。
 
 ## 注意
 
