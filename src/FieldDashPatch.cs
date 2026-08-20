@@ -6,7 +6,7 @@ using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     [HarmonyPatch(typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc))]
     internal static class FieldDashPatch
@@ -64,7 +64,7 @@ namespace NocturneDungeonControls
             {
                 _dashLatched = !_dashLatched;
                 MelonLogger.Msg(
-                    $"[NocturneDungeonControls] Dash keep {(_dashLatched ? "ON" : "OFF")} (LT+RT)");
+                    $"[NocturneModernController] Dash keep {(_dashLatched ? "ON" : "OFF")} (LT+RT)");
             }
             _comboWasHeld = comboHeld;
 
@@ -98,7 +98,7 @@ namespace NocturneDungeonControls
             if (!_loggedHeld)
             {
                 _loggedHeld = true;
-                MelonLogger.Msg("[NocturneDungeonControls] Dash ON (P/LT, dungeon/world map x1.60)");
+                MelonLogger.Msg("[NocturneModernController] Dash ON (P/LT, dungeon/world map x1.60)");
             }
         }
 
@@ -151,14 +151,14 @@ namespace NocturneDungeonControls
                 {
                     _loggedUnsupported = true;
                     MelonLogger.Warning(
-                        $"[NocturneDungeonControls] Unsupported game constants; dash disabled " +
+                        $"[NocturneModernController] Unsupported game constants; dash disabled " +
                         $"(normal={normal}, alternate={alternate}, worldMap={worldMap}).");
                 }
                 return false;
             }
 
             _addressesValidated = true;
-            MelonLogger.Msg("[NocturneDungeonControls] Native movement speed constants validated (29/20/16).");
+            MelonLogger.Msg("[NocturneModernController] Native movement speed constants validated (29/20/16).");
             return true;
         }
 
@@ -215,7 +215,7 @@ namespace NocturneDungeonControls
             }
 
             _loggedHeld = false;
-            MelonLogger.Msg("[NocturneDungeonControls] Dash OFF");
+            MelonLogger.Msg("[NocturneModernController] Dash OFF");
         }
     }
 }

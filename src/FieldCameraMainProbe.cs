@@ -2,7 +2,7 @@ using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     /// <summary>
     /// Read-only telemetry for identifying the camera state changed by LB/RB.
@@ -22,7 +22,7 @@ namespace NocturneDungeonControls
             }
 
             _logged = true;
-            MelonLogger.Msg("[NocturneDungeonControls] EXTERNAL XINPUT probe active. Move Right Stick left/right/up/down.");
+            MelonLogger.Msg("[NocturneModernController] EXTERNAL XINPUT probe active. Move Right Stick left/right/up/down.");
         }
 
         private static void Postfix()
@@ -41,7 +41,7 @@ namespace NocturneDungeonControls
                 (System.Math.Abs(x) >= 5000 || System.Math.Abs(y) >= 5000))
             {
                 MelonLogger.Msg(
-                    $"[NocturneDungeonControls] EXTERNAL_RSTICK api={api} " +
+                    $"[NocturneModernController] EXTERNAL_RSTICK api={api} " +
                     $"user={user} x={x} y={y}");
             }
 

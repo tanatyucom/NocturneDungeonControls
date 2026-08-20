@@ -5,7 +5,7 @@ using Il2Cpp;
 using MelonLoader;
 using MelonLoader.NativeUtils;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     /// <summary>
     /// Single native hook for the legacy logical pad check. It augments L1/R1
@@ -38,7 +38,7 @@ namespace NocturneDungeonControls
             _hook.Attach();
 
             logger.Msg(
-                "[NocturneDungeonControls] Scoped pad hook attached: " +
+                "[NocturneModernController] Scoped pad hook attached: " +
                 $"DDS3_PADCHECK_PRESS=0x{padCheckTarget.ToInt64():X}");
         }
 

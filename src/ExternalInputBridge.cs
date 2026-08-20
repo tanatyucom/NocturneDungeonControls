@@ -6,11 +6,11 @@ using System.Reflection;
 using System.Text;
 using MelonLoader;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     internal static class ExternalInputBridge
     {
-        private const string MapName = "NocturneDungeonControls_XInput_v1";
+        private const string MapName = "NocturneModernController_XInput_v1";
         private const int Magic = 0x4E444331;
         private static Process? _helper;
         private static MemoryMappedFile? _map;
@@ -23,8 +23,8 @@ namespace NocturneDungeonControls
             string? directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string path = Path.Combine(
                 directory ?? string.Empty,
-                "NocturneDungeonControls.Helper",
-                "NocturneDungeonControls.InputHelper.exe");
+                "NocturneModernController.Helper",
+                "NocturneModernController.InputHelper.exe");
             if (!File.Exists(path))
             {
                 logger.Warning("Input helper is missing: " + path);
@@ -37,7 +37,7 @@ namespace NocturneDungeonControls
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             });
-            logger.Msg("[NocturneDungeonControls] External XInput helper started.");
+            logger.Msg("[NocturneModernController] External XInput helper started.");
         }
 
         internal static bool TryReadHidStatus(out int devices, out int opened, out int gamingInput)

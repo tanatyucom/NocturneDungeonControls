@@ -3,7 +3,7 @@ using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     /// <summary>
     /// Adds Right Stick X as a digital binding for the game's existing
@@ -52,7 +52,7 @@ namespace NocturneDungeonControls
                 if (!_loggedWaiting)
                 {
                     MelonLogger.Msg(
-                        "[NocturneDungeonControls] Pad input is not ready; waiting without retry spam (" +
+                        "[NocturneModernController] Pad input is not ready; waiting without retry spam (" +
                         exception.GetType().Name + ").");
                     _loggedWaiting = true;
                 }
@@ -84,7 +84,7 @@ namespace NocturneDungeonControls
                 }
 
                 _inputReady = true;
-                MelonLogger.Msg($"[NocturneDungeonControls] Pad input ready (center sample={raw}, deadzone={deadzone}).");
+                MelonLogger.Msg($"[NocturneModernController] Pad input ready (center sample={raw}, deadzone={deadzone}).");
             }
 
             int leftThreshold = Center - deadzone;
@@ -134,21 +134,21 @@ namespace NocturneDungeonControls
             {
                 if (_loggedState == TurnState.Left)
                 {
-                    MelonLogger.Msg("[NocturneDungeonControls] TurnLeft OFF");
+                    MelonLogger.Msg("[NocturneModernController] TurnLeft OFF");
                 }
                 else if (_loggedState == TurnState.Right)
                 {
-                    MelonLogger.Msg("[NocturneDungeonControls] TurnRight OFF");
+                    MelonLogger.Msg("[NocturneModernController] TurnRight OFF");
                 }
             }
 
             if (state == TurnState.Left)
             {
-                MelonLogger.Msg($"[NocturneDungeonControls] TurnLeft ON (raw={raw}, deadzone={deadzone})");
+                MelonLogger.Msg($"[NocturneModernController] TurnLeft ON (raw={raw}, deadzone={deadzone})");
             }
             else if (state == TurnState.Right)
             {
-                MelonLogger.Msg($"[NocturneDungeonControls] TurnRight ON (raw={raw}, deadzone={deadzone})");
+                MelonLogger.Msg($"[NocturneModernController] TurnRight ON (raw={raw}, deadzone={deadzone})");
             }
 
             _loggedState = state;
@@ -194,7 +194,7 @@ namespace NocturneDungeonControls
             catch (Exception exception)
             {
                 MelonLogger.Warning(
-                    "[NocturneDungeonControls] Right-stick turn check failed: " +
+                    "[NocturneModernController] Right-stick turn check failed: " +
                     exception.GetType().Name + ": " + exception.Message);
             }
         }

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace NocturneDungeonControls
+namespace NocturneModernController
 {
     internal static class XInputReader
     {
