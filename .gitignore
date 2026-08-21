@@ -8,4 +8,7 @@ helper/obj/
 *.user
 *.suo
 *.log
+controller-*.jsonl
+tools/ControllerSideRead/native/SDL3.dll
+tools/ControllerSideRead/native/SDL3-*.zip
 

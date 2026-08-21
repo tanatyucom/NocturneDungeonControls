@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
+    <AssemblyName>NocturneModernController.ControllerProbe</AssemblyName>
+    <RootNamespace>NocturneModernController.ControllerProbe</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('native\SDL3.dll')">
+    <None Include="native\SDL3.dll"
+          Link="SDL3.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          TargetPath="SDL3.dll" />
+  </ItemGroup>
+</Project>
