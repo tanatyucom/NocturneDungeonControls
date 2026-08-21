@@ -1,194 +1,290 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
-using HidSharp;
-using Windows.Gaming.Input;
 
 internal static class Program
 {
-    private const string MapName = "NocturneModernController_XInput_v1";
-    private const int Magic = 0x4E444331;
-    private static readonly object HidLock = new object();
-    private static readonly byte[] HidReport = new byte[64];
-    private static int _hidLength;
-    private static int _hidSequence;
-    private static int _hidDeviceCount;
-    private static int _hidOpenCount;
-    private static int _gamingInputCount;
-    private static int _gamingLeftX;
-    private static int _gamingLeftY;
-    private static int _gamingButtons;
-    private static int _gamingTriggers;
+    private const string MapName = "NocturneModernController_SDL_v2";
+    private const int Magic = 0x4E4D4332;
+    private const int StopRequested = 0x53544F50;
+    private const uint InitGamepad = 0x00002000;
+    private const uint MouseEventMove = 0x0001;
+    private const int VerticalEngageThreshold = 10000;
+    private const bool SyntheticVerticalMouseEnabled = false;
+    private static readonly string LogPath = Path.Combine(
+        Path.GetTempPath(),
+        "NocturneModernController.InputHelper.log");
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Gamepad
+    private static int Main(string[] args)
     {
-        internal ushort Buttons;
-        internal byte LeftTrigger;
-        internal byte RightTrigger;
-        internal short ThumbLX;
-        internal short ThumbLY;
-        internal short ThumbRX;
-        internal short ThumbRY;
-    }
+        File.WriteAllText(LogPath, $"START {DateTimeOffset.Now:O}{Environment.NewLine}");
+        int parentPid = args.Length > 0 && int.TryParse(args[0], out int parsed)
+            ? parsed
+            : 0;
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct State
-    {
-        internal uint PacketNumber;
-        internal Gamepad Gamepad;
-    }
-
-    [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")]
-    private static extern uint GetState14(uint index, out State state);
-
-    [DllImport("xinput1_3.dll", EntryPoint = "XInputGetState")]
-    private static extern uint GetState13(uint index, out State state);
-
-    [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetState")]
-    private static extern uint GetState910(uint index, out State state);
-
-    private static void Main()
-    {
-        var hidThread = new Thread(ReadXboxHid) { IsBackground = true };
-        hidThread.Start();
-
-        using MemoryMappedFile map = MemoryMappedFile.CreateOrOpen(MapName, 128);
-        using MemoryMappedViewAccessor view = map.CreateViewAccessor();
-        while (true)
+        if (!SdlNative.SDL_Init(InitGamepad))
         {
-            bool connected = TryReadGamingInput(out int rx, out int ry);
-            int api;
-            int user;
-            State state = default;
-            if (connected)
-            {
-                api = 3;
-                user = 0;
-            }
-            else
-            {
-                connected = TryRead(out api, out user, out state);
-                rx = connected ? state.Gamepad.ThumbRX : 0;
-                ry = connected ? state.Gamepad.ThumbRY : 0;
-            }
-            view.Write(4, connected ? 1 : 0);
-            view.Write(8, rx);
-            view.Write(12, ry);
-            view.Write(16, connected ? api : -1);
-            view.Write(20, connected ? user : -1);
-            lock (HidLock)
-            {
-                view.Write(24, _hidLength);
-                view.Write(28, _hidSequence);
-                view.WriteArray(32, HidReport, 0, HidReport.Length);
-                view.Write(96, _hidDeviceCount);
-                view.Write(100, _hidOpenCount);
-                view.Write(104, _gamingInputCount);
-                view.Write(108, _gamingLeftX);
-                view.Write(112, _gamingLeftY);
-                view.Write(116, _gamingButtons);
-                view.Write(120, _gamingTriggers);
-            }
-            view.Write(0, Magic);
-            Thread.Sleep(8);
+            Log("SDL_Init failed");
+            return 2;
         }
+        Log("SDL_Init OK; parentPid=" + parentPid);
+
+        using MemoryMappedFile map = MemoryMappedFile.CreateOrOpen(MapName, 64);
+        using MemoryMappedViewAccessor view = map.CreateViewAccessor();
+        IntPtr gamepad = IntPtr.Zero;
+        int retry = 0;
+        int sequence = 0;
+        view.Write(24, 0);
+        view.Write(28, 0);
+        view.Write(32, 0);
+        int lastMouseTick = 0;
+        bool cursorHidden = false;
+
+        try
+        {
+            while (ParentIsAlive(parentPid) && view.ReadInt32(24) != StopRequested)
+            {
+                SdlNative.SDL_UpdateJoysticks();
+                if (gamepad == IntPtr.Zero && retry-- <= 0)
+                {
+                    gamepad = TryOpenValidatedGamepad();
+                    Log(gamepad == IntPtr.Zero ? "TARGET WAIT" : "TARGET OPEN");
+                    retry = 120;
+                }
+
+                short x = gamepad == IntPtr.Zero
+                    ? (short)0
+                    : SdlNative.SDL_GetGamepadAxis(gamepad, 2);
+                short y = gamepad == IntPtr.Zero
+                    ? (short)0
+                    : SdlNative.SDL_GetGamepadAxis(gamepad, 3);
+
+                int gamePid = view.ReadInt32(32);
+                bool cameraContextActive = view.ReadInt32(28) != 0 &&
+                    gamePid > 0 &&
+                    IsForegroundProcess(gamePid);
+                SetCursorHidden(cameraContextActive, ref cursorHidden);
+                if (SyntheticVerticalMouseEnabled && cameraContextActive &&
+                    Math.Abs((int)y) >= VerticalEngageThreshold &&
+                    unchecked(Environment.TickCount - lastMouseTick) >= 4)
+                {
+                    lastMouseTick = Environment.TickCount;
+                    int deltaY = y < 0 ? -4 : 4;
+                    NativeMethods.mouse_event(
+                        MouseEventMove,
+                        0,
+                        unchecked((uint)deltaY),
+                        0,
+                        UIntPtr.Zero);
+                }
+
+                view.Write(4, gamepad == IntPtr.Zero ? 0 : 1);
+                view.Write(8, (int)x);
+                view.Write(12, (int)y);
+                view.Write(16, ++sequence);
+                view.Write(20, Environment.TickCount);
+                view.Write(0, Magic);
+                Thread.Sleep(4);
+            }
+        }
+        finally
+        {
+            SetCursorHidden(false, ref cursorHidden);
+            if (gamepad != IntPtr.Zero)
+            {
+                SdlNative.SDL_CloseGamepad(gamepad);
+            }
+
+            // SDL_Quit is intentionally omitted because Q2 found that it can
+            // block indefinitely with reWASD and Steam Input active.
+        }
+        Log("STOP");
+
+        return 0;
     }
 
-    private static bool TryReadGamingInput(out int x, out int y)
+    private static void SetCursorHidden(bool shouldHide, ref bool cursorHidden)
     {
-        _gamingInputCount = Windows.Gaming.Input.Gamepad.Gamepads.Count;
-        if (_gamingInputCount == 0)
+        if (shouldHide == cursorHidden)
         {
-            x = y = 0;
+            return;
+        }
+
+        if (shouldHide)
+        {
+            while (NativeMethods.ShowCursor(false) >= 0)
+            {
+            }
+        }
+        else
+        {
+            while (NativeMethods.ShowCursor(true) < 0)
+            {
+            }
+        }
+
+        cursorHidden = shouldHide;
+    }
+
+    private static bool IsForegroundProcess(int expectedPid)
+    {
+        IntPtr window = NativeMethods.GetForegroundWindow();
+        if (window == IntPtr.Zero)
+        {
             return false;
         }
 
-        GamepadReading reading = Windows.Gaming.Input.Gamepad.Gamepads[0].GetCurrentReading();
-        _gamingLeftX = (int)(reading.LeftThumbstickX * 32767.0);
-        _gamingLeftY = (int)(reading.LeftThumbstickY * 32767.0);
-        _gamingButtons = unchecked((int)reading.Buttons);
-        _gamingTriggers = ((int)(reading.LeftTrigger * 255.0) & 0xFF) |
-            (((int)(reading.RightTrigger * 255.0) & 0xFF) << 8);
-        x = (int)(reading.RightThumbstickX * 32767.0);
-        y = (int)(reading.RightThumbstickY * 32767.0);
-        return true;
+        NativeMethods.GetWindowThreadProcessId(window, out uint foregroundPid);
+        return foregroundPid == unchecked((uint)expectedPid);
     }
 
-    private static void ReadXboxHid()
+    private static bool ParentIsAlive(int parentPid)
     {
-        while (true)
+        if (parentPid <= 0)
         {
-            HidDevice[] devices = new System.Collections.Generic.List<HidDevice>(
-                DeviceList.Local.GetHidDevices(0x045E)).ToArray();
-            _hidDeviceCount = devices.Length;
-            foreach (HidDevice device in devices)
+            return true;
+        }
+
+        try
+        {
+            return !Process.GetProcessById(parentPid).HasExited;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static IntPtr TryOpenValidatedGamepad()
+    {
+        IntPtr ids = SdlNative.SDL_GetJoysticks(out int count);
+        try
+        {
+            // Prefer a controller that already reports stick activity. This
+            // avoids selecting an idle virtual pad when both a physical pad
+            // and a remapper/Steam virtual device are enumerated. If every
+            // candidate is neutral, fall back to the first SDL gamepad so
+            // ordinary Xbox, PlayStation, Switch and third-party pads work.
+            IntPtr fallback = IntPtr.Zero;
+            for (int index = 0; index < count; index++)
             {
-                if (!device.TryOpen(out HidStream stream))
+                uint id = unchecked((uint)Marshal.ReadInt32(ids, index * sizeof(uint)));
+                ushort vendor = SdlNative.SDL_GetJoystickVendorForID(id);
+                ushort product = SdlNative.SDL_GetJoystickProductForID(id);
+                Log($"CANDIDATE index={index} id={id} vid=0x{vendor:X4} pid=0x{product:X4} gamepad={SdlNative.SDL_IsGamepad(id)}");
+                if (!SdlNative.SDL_IsGamepad(id))
                 {
                     continue;
                 }
 
-                _hidOpenCount++;
-
-                using (stream)
+                IntPtr candidate = SdlNative.SDL_OpenGamepad(id);
+                if (candidate == IntPtr.Zero)
                 {
-                    stream.ReadTimeout = 250;
-                    byte[] buffer = new byte[device.GetMaxInputReportLength()];
-                    while (true)
+                    continue;
+                }
+
+                short x = SdlNative.SDL_GetGamepadAxis(candidate, 2);
+                short y = SdlNative.SDL_GetGamepadAxis(candidate, 3);
+                if (Math.Abs((int)x) >= 2000 || Math.Abs((int)y) >= 2000)
+                {
+                    if (fallback != IntPtr.Zero)
                     {
-                        try
-                        {
-                            int length = stream.Read(buffer, 0, buffer.Length);
-                            lock (HidLock)
-                            {
-                                _hidLength = Math.Min(length, HidReport.Length);
-                                Array.Clear(HidReport, 0, HidReport.Length);
-                                Array.Copy(buffer, HidReport, _hidLength);
-                                _hidSequence++;
-                            }
-                        }
-                        catch (TimeoutException)
-                        {
-                            continue;
-                        }
-                        catch
-                        {
-                            break;
-                        }
+                        SdlNative.SDL_CloseGamepad(fallback);
                     }
+                    Log($"INPUT SOURCE active SDL gamepad vid=0x{vendor:X4} pid=0x{product:X4}");
+                    return candidate;
+                }
+
+                if (fallback == IntPtr.Zero)
+                {
+                    fallback = candidate;
+                    Log($"INPUT FALLBACK SDL gamepad vid=0x{vendor:X4} pid=0x{product:X4}");
+                }
+                else
+                {
+                    SdlNative.SDL_CloseGamepad(candidate);
                 }
             }
 
-            Thread.Sleep(1000);
+            return fallback;
+        }
+        finally
+        {
+            if (ids != IntPtr.Zero)
+            {
+                SdlNative.SDL_free(ids);
+            }
         }
     }
 
-    private static bool TryRead(out int apiFound, out int userFound, out State found)
+    private static void Log(string message)
     {
-        for (int api = 0; api < 3; api++)
+        try
         {
-            for (uint user = 0; user < 4; user++)
-            {
-                uint result = api == 0
-                    ? GetState14(user, out State state)
-                    : api == 1
-                        ? GetState13(user, out state)
-                        : GetState910(user, out state);
-                if (result == 0)
-                {
-                    apiFound = api;
-                    userFound = (int)user;
-                    found = state;
-                    return true;
-                }
-            }
+            File.AppendAllText(LogPath, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
         }
+        catch
+        {
+        }
+    }
 
-        apiFound = -1;
-        userFound = -1;
-        found = default;
-        return false;
+    private static class SdlNative
+    {
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool SDL_Init(uint initFlags);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void SDL_UpdateJoysticks();
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr SDL_GetJoysticks(out int count);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void SDL_free(IntPtr memory);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool SDL_IsGamepad(uint instanceId);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr SDL_OpenGamepad(uint instanceId);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void SDL_CloseGamepad(IntPtr gamepad);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern short SDL_GetGamepadAxis(IntPtr gamepad, int axis);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ushort SDL_GetJoystickVendorForID(uint instanceId);
+
+        [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ushort SDL_GetJoystickProductForID(uint instanceId);
+    }
+
+    private static class NativeMethods
+    {
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        internal static extern uint GetWindowThreadProcessId(
+            IntPtr window,
+            out uint processId);
+
+        [DllImport("user32.dll")]
+        internal static extern void mouse_event(
+            uint flags,
+            uint dx,
+            uint dy,
+            uint data,
+            UIntPtr extraInfo);
+
+        [DllImport("user32.dll")]
+        internal static extern int ShowCursor([MarshalAs(UnmanagedType.Bool)] bool show);
     }
 }

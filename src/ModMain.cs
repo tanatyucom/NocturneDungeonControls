@@ -13,15 +13,28 @@ namespace NocturneModernController
     {
         public override void OnInitializeMelon()
         {
+            SdlRightStickInput.Initialize(LoggerInstance);
             HarmonyInstance.CreateClassProcessor(typeof(FieldDashPatch)).Patch();
             HarmonyInstance.CreateClassProcessor(typeof(PuzzleLogicalTurnPatch)).Patch();
-            LoggerInstance.Msg("[NocturneModernController] Dash loaded: hold LT/P; press LT+RT to toggle dash keep.");
-            LoggerInstance.Msg("[NocturneModernController] Q3 vanilla-turn PoC loaded: hold F6 left / F7 right.");
+            HarmonyInstance.CreateClassProcessor(typeof(FormationFlagProbe)).Patch();
+            HarmonyInstance.CreateClassProcessor(typeof(NativeRightStickVerticalPatch)).Patch();
+            LoggerInstance.Msg("[NocturneModernController] Dash loaded: hold LT/RT/P; press LT+RT to toggle dash keep.");
+            LoggerInstance.Msg("[NocturneModernController] Native right-stick dungeon camera loaded; legacy LB/RB field turn suppressed, BATTLE untouched.");
         }
 
         public override void OnUpdate()
         {
-            VanillaTurnInvocationPoc.SampleTemporaryInput();
+            SdlRightStickInput.Sample();
+            bool explorationActive = FieldDashPatch.IsExplorationActive;
+            ExternalInputBridge.UpdateGameContext(explorationActive);
+            ExplorationCursorController.Update(explorationActive);
+            QuickHealRuntimeProbe.Sample();
+        }
+
+        public override void OnDeinitializeMelon()
+        {
+            ExplorationCursorController.Restore();
+            SdlRightStickInput.Shutdown();
         }
     }
 }

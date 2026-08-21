@@ -30,6 +30,10 @@ namespace NocturneModernController
         private static bool _loggedUnsupported;
         private static bool _dashLatched;
         private static bool _comboWasHeld;
+        private static int _lastExplorationTick;
+
+        internal static bool IsExplorationActive =>
+            unchecked(Environment.TickCount - _lastExplorationTick) <= 100;
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int virtualKey);
@@ -69,11 +73,12 @@ namespace NocturneModernController
             _comboWasHeld = comboHeld;
 
             bool keyboardHeld = (GetAsyncKeyState(VirtualKeyDash) & 0x8000) != 0;
-            return keyboardHeld || leftTrigger || _dashLatched;
+            return keyboardHeld || leftTrigger || rightTrigger || _dashLatched;
         }
 
         private static void Prefix()
         {
+            _lastExplorationTick = Environment.TickCount;
             RestoreSpeeds();
             if (!UpdateDashState())
             {
@@ -98,7 +103,7 @@ namespace NocturneModernController
             if (!_loggedHeld)
             {
                 _loggedHeld = true;
-                MelonLogger.Msg("[NocturneModernController] Dash ON (P/LT, dungeon/world map x1.60)");
+                MelonLogger.Msg("[NocturneModernController] Dash ON (P/LT/RT, dungeon/world map x1.60)");
             }
         }
 

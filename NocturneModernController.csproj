@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Optimize>true</Optimize>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
@@ -19,10 +20,13 @@
     <Compile Remove="helper\**\*.cs" />
     <Compile Remove="tools\**\*.cs" />
     <Compile Remove="analysis\**\*.cs" />
-    <Compile Remove="src\ExternalInputBridge.cs" />
     <Compile Remove="src\FieldCameraMainProbe.cs" />
     <Compile Remove="src\RightStickTurnInput.cs" />
     <Compile Remove="src\XInputReader.cs" />
+    <!-- Investigation-only telemetry retained in source, excluded from releases. -->
+    <Compile Remove="src\CameraVectorProbe.cs" />
+    <Compile Remove="src\NativeMouseVerticalCameraPoc.cs" />
+    <Compile Remove="src\VerticalCameraStateProbe.cs" />
 
     <Reference Include="MelonLoader">
       <HintPath>$(GameDir)\MelonLoader\net6\MelonLoader.dll</HintPath>
